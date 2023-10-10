@@ -5,6 +5,7 @@
     <string name="ButtonText">I\’m a button</string>
     <string name="login_text">Login</string>
     <string name="password_text">Password</string>
+    <string name="start_chat">Start Chat</string>
 
 
 </resources>
