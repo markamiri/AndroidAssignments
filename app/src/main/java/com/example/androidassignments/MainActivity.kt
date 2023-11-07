@@ -1,7 +1,6 @@
 package com.example.androidassignments
 
 import android.content.Intent
-
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
@@ -22,6 +21,14 @@ class MainActivity : AppCompatActivity() {
             startActivity(intent)  // Start the ChatWindow activity
 
         }
+
+        // Add code to start the TestToolbar activity
+        val testToolbarButton = findViewById<Button>(R.id.startTestToolbarButton)
+        testToolbarButton.setOnClickListener {
+            val testToolbarIntent = Intent(this, TestToolbar::class.java)
+            startActivity(testToolbarIntent)  // Start the TestToolbar activity
+        }
+
     }
     override fun onStart() {
         super.onStart()
@@ -71,6 +78,7 @@ class MainActivity : AppCompatActivity() {
         // Custom code for onRestoreInstanceState
         Log.i("MainActivity", "onRestoreInstanceState")
     }
+
 
 }
 

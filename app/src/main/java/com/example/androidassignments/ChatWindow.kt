@@ -1,92 +1,84 @@
 package com.example.androidassignments
-import android.content.Context
+
 import android.os.Bundle
-import android.view.View
+import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ListView
 import androidx.appcompat.app.AppCompatActivity
-import android.widget.ArrayAdapter // Import ArrayAdapter
-import android.view.LayoutInflater
-import android.view.ViewGroup
-import android.widget.TextView
 
+
+import android.content.ContentValues
+import android.database.sqlite.SQLiteDatabase
 
 class ChatWindow : AppCompatActivity() {
-
-    private lateinit var chatListView: ListView
-    private lateinit var messageEditText: EditText
-    private lateinit var sendButton: Button
+    private var chatListView: ListView? = null
+    private var messageEditText: EditText? = null
+    private var sendButton: Button? = null
     private val chatMessages = ArrayList<String>()
+    private var dbHelper: ChatDatabaseHelper? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_chat_window)
-
-        // Initialize class variables with findViewById
         chatListView = findViewById(R.id.chatListView)
         messageEditText = findViewById(R.id.messageEditText)
         sendButton = findViewById(R.id.sendButton)
+        dbHelper = ChatDatabaseHelper(this)
 
-        // Create and set an adapter for the chatListView using chatMessages ArrayList
-        val chatAdapter = ChatAdapter(this, chatMessages)
+        val database = dbHelper?.writableDatabase
 
-        // Correctly cast the adapter to ArrayAdapter before setting it
-        chatListView.adapter = chatAdapter
+        val query = "SELECT * FROM " + ChatDatabaseHelper.TABLE_NAME
+        val cursor = database?.rawQuery(query, null)
 
-        // Set an onClickListener for the sendButton
-        sendButton.setOnClickListener {
-            // Get the text from the EditText field
-            val message = messageEditText.text.toString().trim()
-
-            if (message.isNotEmpty()) {
-                // Add the message to the chatMessages ArrayList
+        while (cursor?.moveToNext() == true) {
+            val columnIndex = cursor.getColumnIndex(ChatDatabaseHelper.KEY_MESSAGE)
+            if (columnIndex >= 0) {
+                val message = cursor.getString(columnIndex)
+                Log.i("ChatDatabaseHelper", "SQL MESSAGE: $message")
                 chatMessages.add(message)
+            } else {
+                Log.w("ChatDatabaseHelper", "Column not found: ${ChatDatabaseHelper.KEY_MESSAGE}")
+            }
+        }
 
-                // Clear the EditText field after sending
-                messageEditText.text.clear()
 
-                // Notify the adapter that the data set has changed
+        Log.i("ChatDatabaseHelper", "Cursor's column count = " + cursor?.columnCount)
+        cursor?.columnNames?.forEachIndexed { i, columnName ->
+            Log.i("ChatDatabaseHelper", "Column $i name: $columnName")
+        }
+        cursor?.close() // Close the Cursor when done with it
+
+        // Continue with your code to display the chat messages in the ListView
+
+        val chatAdapter = ChatAdapter(this, chatMessages)
+        chatListView?.adapter = chatAdapter
+
+        sendButton?.setOnClickListener {
+            val message = messageEditText?.text.toString().trim()
+            if (message.isNotEmpty()) {
+                chatMessages.add(message)
                 chatAdapter.notifyDataSetChanged()
+                messageEditText?.text?.clear()
+
+                val dbHelper = ChatDatabaseHelper(this)
+                val db = dbHelper.writableDatabase
+
+                val values = ContentValues()
+                values.put(ChatDatabaseHelper.KEY_MESSAGE, message)
+
+                db.insert(ChatDatabaseHelper.TABLE_NAME, null, values)
+                db.close() // Close the database connection
             }
         }
     }
 
-    inner class ChatAdapter(context: Context, private val messages: ArrayList<String>) :
-        ArrayAdapter<String>(context, android.R.layout.simple_list_item_1, messages) {
-
-        override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-            val inflater = LayoutInflater.from(context)
-            val result: View
-
-            if (position % 2 == 0) {
-                result = inflater.inflate(R.layout.chat_row_incoming, null)
-            } else {
-                result = inflater.inflate(R.layout.chat_row_outgoing, null)
-            }
-
-            val message = result.findViewById<TextView>(R.id.message_text)
-
-            // Ensure that the context and TextView type are correct
-            if (position < messages.size) {
-                message.text = getItem(position) // Assuming messages is your ArrayList<String>
-            } else {
-                message.text = "" // Set a default text or handle this case as needed
-            }
-
-            return result
-        }
-
-        override fun getCount(): Int {
-            // Return the number of rows (number of strings in the ArrayList)
-            return messages.size
-        }
-
-        override fun getItem(position: Int): String? {
-            // Return the item to show in the list at the specified position
-            return messages.getOrNull(position)
-        }
-
-        // Rest of your ChatWindow.kt code
+    // Implement onDestroy to close the database when the activity is destroyed
+    override fun onDestroy() {
+        dbHelper?.close()
+        super.onDestroy()
     }
+
+    // Continue with your ChatAdapter and other code here
 }
+
